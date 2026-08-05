@@ -1,0 +1,29 @@
+{
+    "target_search_col": "Local Service ID",
+    "selected_display_cols": [
+        "Schedule Date",
+        "Task No",
+        "LAN Engineer Name",
+        "MS Name",
+        "Suspected Area of Issue",
+        "Root Cause Category",
+        "Service Root Cause",
+        "On-site Resolution",
+        "On-site Resolution-2",
+        "Task Status",
+        "MS Approve",
+        "MS Remark",
+        "On-Site Engr Remark",
+        "Before dBm",
+        "After dBm",
+        "New Box Name (if change)",
+        "New Port No",
+        "New CPE No",
+        "Previous Resolution",
+        "Root Cause",
+        "Bandwidth",
+        "Customer Remark (Description)",
+        "Scheduling Remark",
+        "Local Service ID"
+    ]
+}
