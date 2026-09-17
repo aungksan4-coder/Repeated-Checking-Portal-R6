@@ -59,21 +59,26 @@ def save_settings_callback():
 def load_all_tabs():
     all_sheets = pd.read_excel(EXCEL_URL, sheet_name=None)
     
-    # ချန်လှပ်လိုသော Tab များကို အသေး(lowercase) ဖြင့်သာ ရေးထားပါ
-    tabs_to_ignore = ["on/off", "port los"]
-    
     combined_list = []
+    
+    # Terminal တွင် မည်သည့် Tab များ တွေ့ရှိကြောင်း Print ထုတ်ပြပါမည်
+    print("\n🔍 Found Tabs in Google Sheet:", list(all_sheets.keys()))
+    
     for tab_name, df_sheet in all_sheets.items():
-        # Google Sheet ဘက်က Tab Name ကို အသေးပြောင်းပြီးမှ စစ်ပါမည်
-        if str(tab_name).lower() in tabs_to_ignore:
+        cleaned_name = str(tab_name).lower().strip()
+        
+        # နာမည်အတိအကျမစစ်တော့ဘဲ စာသားပါရုံဖြင့် (Partial Match) ကျော်သွားအောင် ပြင်ထားပါသည်
+        if ("on/off" in cleaned_name) or ("port los" in cleaned_name):
+            print(f"🚫 Skipping Tab: {tab_name}")
             continue
             
+        print(f"✅ Loading Tab: {tab_name}")
         df_sheet["Source_Tab"] = tab_name
         combined_list.append(df_sheet)
     
     full_df = pd.concat(combined_list, ignore_index=True)
     
-    # Format all Date columns to DD-Mon-YYYY (e.g., 5-Aug-2026, 15-Jul-2026)
+    # Format all Date columns to DD-Mon-YYYY
     for col in full_df.columns:
         if "date" in str(col).lower():
             try:
