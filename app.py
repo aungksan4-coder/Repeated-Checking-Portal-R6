@@ -56,7 +56,7 @@ def save_settings_callback():
 
 # --- 3. LOAD & FORMAT ALL TABS ---
 @st.cache_data(ttl=1800)
-def def load_all_tabs():
+def load_all_tabs():
     all_sheets = pd.read_excel(EXCEL_URL, sheet_name=None)
     
     # ချန်လှပ်ထားလိုသော Tab အမည်များကို သတ်မှတ်ခြင်း
