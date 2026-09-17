@@ -57,22 +57,15 @@ def save_settings_callback():
 # --- 3. LOAD & FORMAT ALL TABS ---
 @st.cache_data(ttl=1800)
 def load_all_tabs():
+    # sheet_name=None ဖြင့် Tab အားလုံးကို ဆွဲယူပါမည်
     all_sheets = pd.read_excel(EXCEL_URL, sheet_name=None)
     
     combined_list = []
     
-    # Terminal တွင် မည်သည့် Tab များ တွေ့ရှိကြောင်း Print ထုတ်ပြပါမည်
-    print("\n🔍 Found Tabs in Google Sheet:", list(all_sheets.keys()))
+    # dictionary ထဲမှ ရှေ့ဆုံး Tab ၄ ခုကိုသာ ဖြတ်ယူပါမည် ([:4] သည် ရှေ့ဆုံး ၄ ခုကို ကိုယ်စားပြုသည်)
+    first_four_tabs = list(all_sheets.items())[:4]
     
-    for tab_name, df_sheet in all_sheets.items():
-        cleaned_name = str(tab_name).lower().strip()
-        
-        # နာမည်အတိအကျမစစ်တော့ဘဲ စာသားပါရုံဖြင့် (Partial Match) ကျော်သွားအောင် ပြင်ထားပါသည်
-        if ("on/off" in cleaned_name) or ("port los" in cleaned_name):
-            print(f"🚫 Skipping Tab: {tab_name}")
-            continue
-            
-        print(f"✅ Loading Tab: {tab_name}")
+    for tab_name, df_sheet in first_four_tabs:
         df_sheet["Source_Tab"] = tab_name
         combined_list.append(df_sheet)
     
