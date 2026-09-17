@@ -59,13 +59,13 @@ def save_settings_callback():
 def load_all_tabs():
     all_sheets = pd.read_excel(EXCEL_URL, sheet_name=None)
     
-    # ချန်လှပ်ထားလိုသော Tab အမည်များကို သတ်မှတ်ခြင်း
-    tabs_to_ignore = ["On/Off", "Port Los"]
+    # ချန်လှပ်လိုသော Tab များကို အသေး(lowercase) ဖြင့်သာ ရေးထားပါ
+    tabs_to_ignore = ["on/off", "port los"]
     
     combined_list = []
     for tab_name, df_sheet in all_sheets.items():
-        # အကယ်၍ လက်ရှိ Tab သည် ချန်လှပ်လိုသောစာရင်းထဲတွင် ပါဝင်နေပါက ကျော်သွားမည်
-        if tab_name in tabs_to_ignore:
+        # Google Sheet ဘက်က Tab Name ကို အသေးပြောင်းပြီးမှ စစ်ပါမည်
+        if str(tab_name).lower() in tabs_to_ignore:
             continue
             
         df_sheet["Source_Tab"] = tab_name
