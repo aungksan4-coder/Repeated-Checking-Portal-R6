@@ -241,7 +241,7 @@ def page_one(df, all_columns, saved_prefs):
 
 
 # ==========================================
-# PAGE 2: WEEKLY FILTERED DATA (New Feature)
+# PAGE 2: WEEKLY FILTERED DATA (Updated for Debugging & Safe Matching)
 # ==========================================
 def page_two(df):
     st.title("📅 Weekly Filtered Report")
@@ -250,44 +250,53 @@ def page_two(df):
     try:
         # 1. Calculate Last Week's Monday and Sunday dynamically
         today = datetime.today()
-        days_to_subtract = today.weekday() + 7 # today.weekday() is 0 for Monday, 6 for Sunday
+        days_to_subtract = today.weekday() + 7 
         last_monday = (today - timedelta(days=days_to_subtract)).date()
         last_sunday = last_monday + timedelta(days=6)
         
         st.info(f"**Applied Date Filter (Column A):** {last_monday.strftime('%d-%b-%Y')} (Monday) to {last_sunday.strftime('%d-%b-%Y')} (Sunday)")
 
-        # Safety Check: Ensure dataframe has enough columns
-        if len(df.columns) < 56: # BD is index 55
-            st.error("The Google Sheet does not have enough columns to perform the requested filters (Needs at least up to Column BD).")
+        if len(df.columns) < 56: 
+            st.error("The Google Sheet does not have enough columns to perform the requested filters.")
             return
 
         working_df = df.copy()
 
-        # --- APPLYING FILTERS ---
-        # 1. Filter Column A (Index 0) - Date
+        # --- APPLYING FILTERS (With safe string matching) ---
+        
+        # 1. Filter Column A (Date)
         col_A_dt = pd.to_datetime(working_df.iloc[:, 0], errors="coerce")
         date_mask = (col_A_dt.dt.date >= last_monday) & (col_A_dt.dt.date <= last_sunday)
 
-        # 2. Filter Column C (Index 2) - Contains 'TKT'
+        # 2. Filter Column C (Contains 'TKT')
         c_mask = working_df.iloc[:, 2].astype(str).str.contains("TKT", case=False, na=False)
 
-        # 3. Filter Column I (Index 8) - Contains 'FR-SLA' OR 'Biz'
+        # 3. Filter Column I (Contains 'FR-SLA' OR 'Biz')
         i_mask = working_df.iloc[:, 8].astype(str).str.contains("FR-SLA|Biz", case=False, na=False)
 
-        # 4. Filter Column BD (Index 55) - Exact Match
-        allowed_statuses = ["Resolved", "Resolved (Auto)", "Resolved (No KPI)"]
-        bd_mask = working_df.iloc[:, 55].astype(str).isin(allowed_statuses)
+        # 4. Filter Column BD (Exact Match - Safe Mode)
+        # နေရာလွတ် (Space) များကိုဖယ်ရှားပြီး၊ စာလုံးအကြီးအသေးပြဿနာမရှိစေရန် lowercase ပြောင်း၍စစ်ဆေးပါမည်
+        allowed_statuses = ["resolved", "resolved (auto)", "resolved (no kpi)"]
+        bd_mask = working_df.iloc[:, 55].astype(str).str.strip().str.lower().isin(allowed_statuses)
 
         # Combine all masks
         final_mask = date_mask & c_mask & i_mask & bd_mask
         filtered_df = working_df[final_mask]
 
+        # --- 🔍 FILTER DEBUGGING SECTION ---
+        # ဘယ်အဆင့်မှာ Data 0 ဖြစ်သွားလဲဆိုတာ စစ်ဆေးရန်
+        with st.expander("🔍 Filter Debugging (Check which rule has no data)", expanded=True):
+            st.markdown(f"""
+            - Total Rows in Sheet: **{len(working_df):,}**
+            - 1️⃣ Rows matching **Date** ({last_monday} to {last_sunday}): **{date_mask.sum():,}**
+            - 2️⃣ Rows matching **'TKT'** (Col C): **{c_mask.sum():,}**
+            - 3️⃣ Rows matching **'FR-SLA / Biz'** (Col I): **{i_mask.sum():,}**
+            - 4️⃣ Rows matching **Status** (Col BD): **{bd_mask.sum():,}**
+            - 🎯 **Rows matching ALL 4 criteria simultaneously:** **{len(filtered_df):,}**
+            """)
+
         # --- SELECTING COLUMNS FOR DISPLAY ---
-        # Mapping Excel letters to Index (A=0):
-        # A=0, C=2, I=8, O=14, BM=64, AY=50, AZ=51, BA=52, BB=53, BC=54, BD=55, BE=56, AK=36, BG=58, V=21
         requested_col_indices = [0, 2, 8, 14, 64, 50, 51, 52, 53, 54, 55, 56, 36, 58, 21]
-        
-        # Filter out indices that might be out of bounds if the sheet is shorter
         valid_indices = [idx for idx in requested_col_indices if idx < len(filtered_df.columns)]
         
         if not filtered_df.empty:
@@ -296,7 +305,6 @@ def page_two(df):
             
             st.dataframe(display_df, use_container_width=True, hide_index=True)
             
-            # Download Button
             csv_data = display_df.to_csv(index=False).encode('utf-8')
             st.download_button(
                 label="📥 Download Filtered Data as CSV",
@@ -305,7 +313,7 @@ def page_two(df):
                 mime="text/csv"
             )
         else:
-            st.warning("No records found for the past week matching these specific criteria.")
+            st.warning("No records found matching ALL specific criteria at the exact same time.")
 
     except Exception as e:
         st.error(f"An error occurred while filtering data: {e}")
