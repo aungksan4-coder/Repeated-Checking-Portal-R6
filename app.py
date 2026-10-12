@@ -363,12 +363,124 @@ def page_two(df):
     except Exception as e:
         st.error(f"An error occurred while filtering data: {e}")
 
+# ==========================================
+# PAGE 3: KO PPO REPORT
+# ==========================================
+def page_three(df):
+    st.title("📊 Ko PPO Report")
+    st.caption("Filtering by Date, Naypyitaw (Column AS), and POI (Column C) on the 4th Tab.")
+
+    try:
+        # --- 1. GET 4TH TAB DATA ONLY ---
+        unique_tabs = df["Source_Tab"].unique()
+        if len(unique_tabs) < 4:
+            st.error("⚠️ The Google Sheet does not have 4 tabs. Please ensure there are at least 4 tabs.")
+            return
+            
+        tab4_name = unique_tabs[3]
+        working_df = df[df["Source_Tab"] == tab4_name].copy()
+        
+        if len(working_df.columns) < 59: # Ensure enough columns for BG (Index 58)
+            st.error(f"⚠️ The 4th tab ('{tab4_name}') does not have enough columns. (Needs at least up to Column BG)")
+            return
+
+        # --- 2. DATE SELECTOR ---
+        col_A_dt = pd.to_datetime(working_df.iloc[:, 0], errors="coerce")
+        # Extract unique valid dates from Column A
+        unique_dates = col_A_dt.dt.date.dropna().unique()
+        # Sort dates descending (latest first)
+        unique_dates_sorted = sorted(list(unique_dates), reverse=True)
+
+        if not unique_dates_sorted:
+             st.warning("No valid dates found in Column A.")
+             return
+
+        selected_date = st.date_input("Select Date for Report:", value=unique_dates_sorted[0], min_value=min(unique_dates_sorted), max_value=max(unique_dates_sorted))
+
+        # --- 3. APPLY FILTERS (Date, Naypyitaw in AS, POI in C) ---
+        date_mask = col_A_dt.dt.date == selected_date
+        
+        # Column AS is index 44 (A=0, ..., AS=44)
+        as_mask = working_df.iloc[:, 44].astype(str).str.contains("Naypyitaw", case=False, na=False)
+        
+        # Column C is index 2
+        c_mask = working_df.iloc[:, 2].astype(str).str.contains("POI", case=False, na=False)
+        
+        filtered_df = working_df[date_mask & as_mask & c_mask].copy()
+
+        if filtered_df.empty:
+            st.warning(f"No records found for Date: {selected_date.strftime('%d-%b-%Y')}, Region: Naypyitaw, and containing 'POI' in Column C.")
+            return
+
+        # --- 4. TASK STATUS COUNT SUMMARY (Column BD - index 55) ---
+        st.markdown("### 📈 Task Status Summary")
+        
+        # Column C is index 2, used for counting
+        # Column BD is index 55, used for grouping
+        col_c_name = filtered_df.columns[2]
+        col_bd_name = filtered_df.columns[55]
+
+        # Group by Status (Col BD) and count based on Col C
+        status_counts = filtered_df.groupby(col_bd_name)[col_c_name].count().reset_index()
+        status_counts.columns = ['Task Status', 'Count']
+        
+        # Sort by count descending
+        status_counts = status_counts.sort_values(by='Count', ascending=False)
+
+        col_sum1, col_sum2 = st.columns([1, 2])
+        with col_sum1:
+             st.dataframe(status_counts, use_container_width=True, hide_index=True)
+
+        # --- 5. DETAIL DATA FOR SPECIFIC STATUSES ---
+        st.markdown("---")
+        st.markdown("### 📋 Detail Data for Pending/Not Visited Statuses")
+
+        # Filter for "Not Visited" or "Engr Visited Pending" in Column BD
+        detail_status_mask = filtered_df.iloc[:, 55].astype(str).str.strip().str.lower().isin(["not visited", "engr visited pending", "engr visited - pending"])
+        
+        detail_df_base = filtered_df[detail_status_mask].copy()
+
+        # Add a filter dropdown for these specific statuses
+        if not detail_df_base.empty:
+             available_detail_statuses = detail_df_base.iloc[:, 55].astype(str).unique().tolist()
+             selected_detail_status = st.multiselect("Filter Detail View by Status:", options=available_detail_statuses, default=available_detail_statuses)
+             
+             if selected_detail_status:
+                 final_detail_df = detail_df_base[detail_df_base.iloc[:, 55].astype(str).isin(selected_detail_status)].copy()
+                 
+                 # Columns to display: C (2), AK (36), BE (56), AV (47), AZ (51), BA (52), BB (53), BC (54), BG (58)
+                 # Note: Excel column indexing (0-based):
+                 # C=2, AK=36, BE=56, AV=47, AZ=51, BA=52, BB=53, BC=54, BG=58
+                 cols_to_show_indices = [2, 36, 56, 47, 51, 52, 53, 54, 58]
+                 
+                 # Check if columns exist before selecting
+                 valid_detail_indices = [i for i in cols_to_show_indices if i < len(final_detail_df.columns)]
+                 
+                 display_detail_df = final_detail_df.iloc[:, valid_detail_indices]
+                 
+                 st.dataframe(display_detail_df, use_container_width=True, hide_index=True)
+                 
+                 csv_detail = display_detail_df.to_csv(index=False).encode('utf-8')
+                 st.download_button(
+                    label="📥 Download Detail Data CSV",
+                    data=csv_detail,
+                    file_name=f"Ko_PPO_Detail_Report_{selected_date}.csv",
+                    mime="text/csv"
+                 )
+             else:
+                 st.info("Please select at least one status to view details.")
+        else:
+             st.info("No records found with status 'Not Visited' or 'Engr Visited Pending' for the selected filters.")
+
+    except Exception as e:
+        st.error(f"An error occurred in Ko PPO Report: {e}")
 
 # ==========================================
 # MAIN APP FLOW & SIDEBAR NAVIGATION
 # ==========================================
 st.sidebar.title("🧭 Navigation")
-page = st.sidebar.radio("Go to:", ["1. Repeated Search Portal", "2. Weekly Filtered Report"])
+# Added "3. Ko PPO Report" to the navigation options
+page = st.sidebar.radio("Go to:", ["1. Repeated Search Portal", "2. Weekly Filtered Report", "3. Ko PPO Report"])
 st.sidebar.markdown("---")
 
 st.sidebar.header("Data Controls")
@@ -391,3 +503,5 @@ if page == "1. Repeated Search Portal":
     page_one(df, all_columns, saved_prefs)
 elif page == "2. Weekly Filtered Report":
     page_two(df)
+elif page == "3. Ko PPO Report":
+    page_three(df)
