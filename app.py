@@ -386,9 +386,7 @@ def page_three(df):
 
         # --- 2. DATE SELECTOR ---
         col_A_dt = pd.to_datetime(working_df.iloc[:, 0], errors="coerce")
-        # Extract unique valid dates from Column A
         unique_dates = col_A_dt.dt.date.dropna().unique()
-        # Sort dates descending (latest first)
         unique_dates_sorted = sorted(list(unique_dates), reverse=True)
 
         if not unique_dates_sorted:
@@ -399,11 +397,7 @@ def page_three(df):
 
         # --- 3. APPLY FILTERS (Date, Naypyitaw in AS, POI in C) ---
         date_mask = col_A_dt.dt.date == selected_date
-        
-        # Column AS is index 44 (A=0, ..., AS=44)
         as_mask = working_df.iloc[:, 44].astype(str).str.contains("Naypyitaw", case=False, na=False)
-        
-        # Column C is index 2
         c_mask = working_df.iloc[:, 2].astype(str).str.contains("POI", case=False, na=False)
         
         filtered_df = working_df[date_mask & as_mask & c_mask].copy()
@@ -415,21 +409,70 @@ def page_three(df):
         # --- 4. TASK STATUS COUNT SUMMARY (Column BD - index 55) ---
         st.markdown("### 📈 Task Status Summary")
         
-        # Column C is index 2, used for counting
-        # Column BD is index 55, used for grouping
         col_c_name = filtered_df.columns[2]
         col_bd_name = filtered_df.columns[55]
 
-        # Group by Status (Col BD) and count based on Col C
         status_counts = filtered_df.groupby(col_bd_name)[col_c_name].count().reset_index()
         status_counts.columns = ['Task Status', 'Count']
-        
-        # Sort by count descending
         status_counts = status_counts.sort_values(by='Count', ascending=False)
 
+        # -----------------------------------------------------
+        # LAYOUT: Two columns for Main Summary vs Tech/Non-Tech
+        # -----------------------------------------------------
         col_sum1, col_sum2 = st.columns([1, 2])
+        
         with col_sum1:
-             st.dataframe(status_counts, use_container_width=True, hide_index=True)
+            st.markdown("#### Overall Task Status")
+            st.dataframe(status_counts, use_container_width=True, hide_index=True)
+
+        with col_sum2:
+            st.markdown("#### Engr Visited Pending Breakdown")
+            
+            # List of specific Technical Cancel values (de-duplicated)
+            tech_cancel_list = [
+                "OTB Need to Box Maintenance", "Port Full", "No Link/High Loss", 
+                "No Fiber", "Cannot Install OTB", "OLT Issue", "Cable Stock Issue", 
+                "Cabling Route Issue", "OTB Need to Port Check", "Need Pole", 
+                "No MN Area", "Coverage Issue", "AP Issue", "Pole Remove", "Site Down"
+            ]
+            
+            # Create lowercase list for robust matching
+            tech_cancel_lower = [v.lower().strip() for v in tech_cancel_list]
+            
+            # Filter Radio Button
+            cancel_type = st.radio("Select Cancel Type:", ["Technical Cancel", "Non Technical Cancel"], horizontal=True)
+            
+            # Filter dataframe for Engr Visited Pending only
+            evp_mask = filtered_df.iloc[:, 55].astype(str).str.strip().str.lower().isin(["engr visited pending", "engr visited - pending"])
+            evp_df = filtered_df[evp_mask].copy()
+            
+            if not evp_df.empty:
+                col_bb_name = evp_df.columns[53]
+                
+                # Mask to check if Column BB value is inside the technical cancel list
+                is_tech_mask = evp_df.iloc[:, 53].astype(str).str.strip().str.lower().isin(tech_cancel_lower)
+                
+                if cancel_type == "Technical Cancel":
+                    breakdown_df = evp_df[is_tech_mask].copy()
+                else:
+                    breakdown_df = evp_df[~is_tech_mask].copy()
+                    
+                if not breakdown_df.empty:
+                    # Group by Col BB and Count with Col C
+                    breakdown_counts = breakdown_df.groupby(col_bb_name)[col_c_name].count().reset_index()
+                    breakdown_counts.columns = ['Reason (Col BB)', 'Count']
+                    breakdown_counts = breakdown_counts.sort_values(by='Count', ascending=False)
+                    
+                    # Add Grand Total Row
+                    total_count = breakdown_counts['Count'].sum()
+                    grand_total_row = pd.DataFrame([{'Reason (Col BB)': 'Grand Total', 'Count': total_count}])
+                    breakdown_counts = pd.concat([breakdown_counts, grand_total_row], ignore_index=True)
+                    
+                    st.dataframe(breakdown_counts, use_container_width=True, hide_index=True)
+                else:
+                    st.info(f"No {cancel_type} records found.")
+            else:
+                st.info("No 'Engr Visited Pending' records found for the selected date.")
 
         # --- 5. DETAIL DATA FOR SPECIFIC STATUSES ---
         st.markdown("---")
@@ -440,7 +483,6 @@ def page_three(df):
         
         detail_df_base = filtered_df[detail_status_mask].copy()
 
-        # Add a filter dropdown for these specific statuses
         if not detail_df_base.empty:
              available_detail_statuses = detail_df_base.iloc[:, 55].astype(str).unique().tolist()
              selected_detail_status = st.multiselect("Filter Detail View by Status:", options=available_detail_statuses, default=available_detail_statuses)
@@ -449,11 +491,8 @@ def page_three(df):
                  final_detail_df = detail_df_base[detail_df_base.iloc[:, 55].astype(str).isin(selected_detail_status)].copy()
                  
                  # Columns to display: C (2), AK (36), BE (56), AV (47), AZ (51), BA (52), BB (53), BC (54), BG (58)
-                 # Note: Excel column indexing (0-based):
-                 # C=2, AK=36, BE=56, AV=47, AZ=51, BA=52, BB=53, BC=54, BG=58
                  cols_to_show_indices = [2, 36, 56, 47, 51, 52, 53, 54, 58]
                  
-                 # Check if columns exist before selecting
                  valid_detail_indices = [i for i in cols_to_show_indices if i < len(final_detail_df.columns)]
                  
                  display_detail_df = final_detail_df.iloc[:, valid_detail_indices]
@@ -479,7 +518,6 @@ def page_three(df):
 # MAIN APP FLOW & SIDEBAR NAVIGATION
 # ==========================================
 st.sidebar.title("🧭 Navigation")
-# Added "3. Ko PPO Report" to the navigation options
 page = st.sidebar.radio("Go to:", ["1. Repeated Search Portal", "2. Weekly Filtered Report", "3. Ko PPO Report"])
 st.sidebar.markdown("---")
 
