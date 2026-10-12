@@ -392,7 +392,7 @@ def page_two(df):
 # PAGE 3: KO PPO REPORT
 # ==========================================
 def page_three(df):
-    st.title("📊 Ko PPO Report")
+    st.title("📊 NPW POI Report (Ko PPO Daily Report)")
     st.caption("Filtering by Date, Naypyitaw (Column AS), and POI (Column C) on the 4th Tab.")
 
     try:
@@ -428,7 +428,7 @@ def page_three(df):
             st.warning(f"No records found for Date: {selected_date.strftime('%d-%b-%Y')}, Region: Naypyitaw, and containing 'POI' in Column C.")
             return
 
-        st.markdown("### 📈 Task Status Summary")
+        st.markdown("### 📈 POI Status")
         
         col_c_name = filtered_df.columns[2]
         col_bd_name = filtered_df.columns[55]
@@ -450,7 +450,7 @@ def page_three(df):
             st.dataframe(status_counts, use_container_width=True, hide_index=True)
 
         with col_sum2:
-            st.markdown("#### Engr Visited Pending Breakdown")
+            st.markdown("#### Engr Visited Pending Reason")
             
             tech_cancel_list = [
                 "OTB Need to Box Maintenance", "Port Full", "No Link/High Loss", 
@@ -492,7 +492,7 @@ def page_three(df):
                 st.info("No 'Engr Visited Pending' records found for the selected date.")
 
         st.markdown("---")
-        st.markdown("### 📋 Detail Data for Pending/Not Visited/Handover Statuses")
+        st.markdown("### 📋 Detail Data for Engr Pending/Not Visited/Handover Statuses")
 
         detail_status_mask = filtered_df.iloc[:, 55].astype(str).str.strip().str.lower().isin([
             "not visited", "engr visited pending", "engr visited - pending", "handover to fttx"
