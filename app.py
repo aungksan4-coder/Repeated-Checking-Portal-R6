@@ -430,6 +430,7 @@ def page_three(df):
             st.markdown("#### Overall Task Status")
             # ညာဘက်အကွက်က Radio Button နဲ့ ညီသွားအောင် အပေါ်ကနေ နေရာလွတ်(Spacer) လေး တွန်းချပေးထားပါတယ်
             st.markdown("<div style='height: 68px;'></div>", unsafe_allow_html=True) 
+            render_copy_button(status_counts, "overall_status")
             st.dataframe(status_counts, use_container_width=True, hide_index=True)
 
         with col_sum2:
@@ -475,6 +476,7 @@ def page_three(df):
                     grand_total_row = pd.DataFrame([{'Reason (Col BB)': 'Grand Total', 'Count': total_count}])
                     breakdown_counts = pd.concat([breakdown_counts, grand_total_row], ignore_index=True)
                     
+                    render_copy_button(breakdown_counts, "breakdown_status")
                     st.dataframe(breakdown_counts, use_container_width=True, hide_index=True)
                 else:
                     st.info(f"No {cancel_type} records found.")
@@ -506,6 +508,7 @@ def page_three(df):
                  
                  display_detail_df = final_detail_df.iloc[:, valid_detail_indices]
                  
+                 render_copy_button(display_detail_df, "detail_data")
                  st.dataframe(display_detail_df, use_container_width=True, hide_index=True)
                  
                  csv_detail = display_detail_df.to_csv(index=False).encode('utf-8')
