@@ -447,7 +447,7 @@ def page_three(df):
             st.markdown("#### Overall Task Status")
             st.markdown("<div style='height: 68px;'></div>", unsafe_allow_html=True) 
             render_copy_button(status_counts, "overall_status")
-            st.dataframe(status_counts, use_container_width=True, hide_index=True)
+            st.dataframe(status_counts.style.set_properties(**{'font-size': '16px'}), use_container_width=True, hide_index=True)
 
         with col_sum2:
             st.markdown("#### Engr Visited Pending Reason")
@@ -485,7 +485,7 @@ def page_three(df):
                     breakdown_counts = pd.concat([breakdown_counts, grand_total_row], ignore_index=True)
                     
                     render_copy_button(breakdown_counts, "breakdown_status")
-                    st.dataframe(breakdown_counts, use_container_width=True, hide_index=True)
+                    st.dataframe(breakdown_counts.style.set_properties(**{'font-size': '16px'}), use_container_width=True, hide_index=True)
                 else:
                     st.info(f"No {cancel_type} records found.")
             else:
@@ -512,7 +512,7 @@ def page_three(df):
                  display_detail_df = final_detail_df.iloc[:, valid_detail_indices]
                  
                  render_copy_button(display_detail_df, "detail_data")
-                 st.dataframe(display_detail_df, use_container_width=True, hide_index=True)
+                 st.dataframe(display_detail_df.style.set_properties(**{'font-size': '15px'}), use_container_width=True, hide_index=True)
                  
                  csv_detail = display_detail_df.to_csv(index=False).encode('utf-8')
                  st.download_button(
