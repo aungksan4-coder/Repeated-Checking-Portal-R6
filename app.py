@@ -52,8 +52,8 @@ def save_settings_callback():
     except Exception as e:
         st.error(f"Failed to save settings: {e}")
 
-# --- 3. LOAD & FORMAT ALL TABS ---
-@st.cache_data(ttl=1800)
+# --- 3. LOAD & FORMAT ALL TABS (Cached for 24 Hours) ---
+@st.cache_data(ttl=86400, show_spinner="Fetching Data from Google Sheets (Syncing Once)...")
 def load_all_tabs():
     all_sheets = pd.read_excel(EXCEL_URL, sheet_name=None)
     combined_list = []
@@ -387,6 +387,7 @@ def page_two(df):
     except Exception as e:
         st.error(f"An error occurred while filtering data: {e}")
 
+
 # ==========================================
 # PAGE 3: KO PPO REPORT
 # ==========================================
@@ -538,13 +539,14 @@ st.sidebar.markdown("---")
 st.sidebar.header("Data Controls")
 st.sidebar.button("🔄 Refresh Data from Google Sheet", on_click=clear_cache_callback)
 
-with st.spinner("Loading data from Google Sheets..."):
-    try:
-        df = load_all_tabs()
-        st.sidebar.metric("Total Rows Loaded", f"{len(df):,}")
-    except Exception as e:
-        st.error(f"Error reading Google Sheet. Ensure General Access is set to 'Anyone with the link can view'. Details: {e}")
-        st.stop()
+# Load data globally so it persists across pages 
+# (Removed the explicit 'with st.spinner()' block so it doesn't flash on every UI interaction)
+try:
+    df = load_all_tabs()
+    st.sidebar.metric("Total Rows Loaded", f"{len(df):,}")
+except Exception as e:
+    st.error(f"Error reading Google Sheet. Ensure General Access is set to 'Anyone with the link can view'. Details: {e}")
+    st.stop()
 
 all_columns = df.columns.tolist()
 saved_prefs = load_saved_settings()
