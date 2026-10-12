@@ -415,6 +415,11 @@ def page_three(df):
         status_counts = filtered_df.groupby(col_bd_name)[col_c_name].count().reset_index()
         status_counts.columns = ['Task Status', 'Count']
         status_counts = status_counts.sort_values(by='Count', ascending=False)
+        
+        # Add Grand Total Row for Overall Task Status Table
+        total_overall = status_counts['Count'].sum()
+        grand_total_overall_row = pd.DataFrame([{'Task Status': 'Grand Total', 'Count': total_overall}])
+        status_counts = pd.concat([status_counts, grand_total_overall_row], ignore_index=True)
 
         # -----------------------------------------------------
         # LAYOUT: Two columns for Main Summary vs Tech/Non-Tech
@@ -423,6 +428,8 @@ def page_three(df):
         
         with col_sum1:
             st.markdown("#### Overall Task Status")
+            # ညာဘက်အကွက်က Radio Button နဲ့ ညီသွားအောင် အပေါ်ကနေ နေရာလွတ်(Spacer) လေး တွန်းချပေးထားပါတယ်
+            st.markdown("<div style='height: 68px;'></div>", unsafe_allow_html=True) 
             st.dataframe(status_counts, use_container_width=True, hide_index=True)
 
         with col_sum2:
@@ -476,10 +483,12 @@ def page_three(df):
 
         # --- 5. DETAIL DATA FOR SPECIFIC STATUSES ---
         st.markdown("---")
-        st.markdown("### 📋 Detail Data for Pending/Not Visited Statuses")
+        st.markdown("### 📋 Detail Data for Pending/Not Visited/Handover Statuses")
 
-        # Filter for "Not Visited" or "Engr Visited Pending" in Column BD
-        detail_status_mask = filtered_df.iloc[:, 55].astype(str).str.strip().str.lower().isin(["not visited", "engr visited pending", "engr visited - pending"])
+        # Filter for "Not Visited", "Engr Visited Pending", or "Handover to FTTx" in Column BD
+        detail_status_mask = filtered_df.iloc[:, 55].astype(str).str.strip().str.lower().isin([
+            "not visited", "engr visited pending", "engr visited - pending", "handover to fttx"
+        ])
         
         detail_df_base = filtered_df[detail_status_mask].copy()
 
@@ -509,7 +518,7 @@ def page_three(df):
              else:
                  st.info("Please select at least one status to view details.")
         else:
-             st.info("No records found with status 'Not Visited' or 'Engr Visited Pending' for the selected filters.")
+             st.info("No records found with status 'Not Visited', 'Engr Visited Pending', or 'Handover to FTTx' for the selected filters.")
 
     except Exception as e:
         st.error(f"An error occurred in Ko PPO Report: {e}")
