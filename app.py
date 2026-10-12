@@ -82,13 +82,54 @@ def clear_cache_callback():
     st.cache_data.clear()
 
 # ==========================================
-# PAGE 1: REPEATED SEARCH PORTAL (Original)
+# HELPER FUNCTION FOR COPY BUTTON (Must be at top level)
+# ==========================================
+def render_copy_button(df, button_id):
+    """Generates a hidden textarea and a button to copy DataFrame to clipboard."""
+    csv_string = df.to_csv(index=False, sep='\t')
+    escaped_string = csv_string.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
+    
+    components.html(
+        f"""
+        <script>
+        function copyToClipboard_{button_id}() {{
+            const textToCopy = "{escaped_string}";
+            navigator.clipboard.writeText(textToCopy).then(function() {{
+                const btn = document.getElementById('copy_btn_{button_id}');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '✅ Copied!';
+                btn.style.backgroundColor = '#d4edda';
+                btn.style.color = '#155724';
+                btn.style.borderColor = '#c3e6cb';
+                setTimeout(function() {{
+                    btn.innerHTML = originalText;
+                    btn.style.backgroundColor = '';
+                    btn.style.color = '';
+                    btn.style.borderColor = '';
+                }}, 2000);
+            }}, function(err) {{
+                console.error('Could not copy text: ', err);
+            }});
+        }}
+        </script>
+        <button id="copy_btn_{button_id}" onclick="copyToClipboard_{button_id}()" 
+                style="padding: 0.25rem 0.5rem; font-size: 0.875rem; border-radius: 0.25rem; 
+                       border: 1px solid #ccc; background-color: #f8f9fa; cursor: pointer; 
+                       margin-bottom: 5px; float: right;">
+            📋 Copy Table
+        </button>
+        """,
+        height=40,
+    )
+
+
+# ==========================================
+# PAGE 1: REPEATED SEARCH PORTAL
 # ==========================================
 def page_one(df, all_columns, saved_prefs):
     st.title("📦 4 Months Repeated Search Portal")
     st.caption("Searching across 4 Months of Data from Google Sheets")
 
-    # Default Search Column (Local Service ID / Column H)
     default_search_idx = 0
     for idx, col in enumerate(all_columns):
         if "local service id" in str(col).lower() or idx == 7:
@@ -241,26 +282,23 @@ def page_one(df, all_columns, saved_prefs):
 
 
 # ==========================================
-# PAGE 2: WEEKLY FILTERED REPORT (Duplicate Checking by Tab 4)
+# PAGE 2: WEEKLY FILTERED REPORT
 # ==========================================
 def page_two(df):
     st.title("📅 Weekly Repeated Report (4th Tab Only)")
     st.caption("Checking duplicates across different dates for Last Week's Mon-Sun on the 4th Tab.")
 
     try:
-        # --- 1. GET 4TH TAB DATA ONLY ---
         unique_tabs = df["Source_Tab"].unique()
         if len(unique_tabs) < 4:
             st.error("⚠️ The Google Sheet does not have 4 tabs. Please ensure there are at least 4 tabs.")
             return
             
-        # 4th Tab Name (Index 3)
         tab4_name = unique_tabs[3]
         working_df = df[df["Source_Tab"] == tab4_name].copy()
         
         st.info(f"📁 **Data Source:** Fetching strictly from the 4th tab ➔ `{tab4_name}`")
 
-        # --- 2. CALCULATE LAST WEEK'S DATES ---
         today = datetime.today()
         days_to_subtract = today.weekday() + 7 
         last_monday = (today - timedelta(days=days_to_subtract)).date()
@@ -272,7 +310,6 @@ def page_two(df):
             st.error("⚠️ The Google Sheet does not have enough columns (Needs at least up to Column BD).")
             return
 
-        # --- 3. APPLY BASE FILTERS ---
         col_A_dt = pd.to_datetime(working_df.iloc[:, 0], errors="coerce")
         date_mask = (col_A_dt.dt.date >= last_monday) & (col_A_dt.dt.date <= last_sunday)
 
@@ -287,7 +324,6 @@ def page_two(df):
         requested_col_indices = [0, 2, 8, 14, 64, 50, 51, 52, 53, 54, 55, 56, 36, 58, 21]
         valid_indices = [idx for idx in requested_col_indices if idx < len(base_filtered_df.columns)]
         
-        # --- 4. REUSABLE FUNCTION FOR FR-SLA & BIZ ---
         def render_section(section_name, keyword):
             st.markdown("---")
             st.markdown(f"### 📌 {section_name} Section (Column I Filter)")
@@ -299,53 +335,42 @@ def page_two(df):
                 st.warning(f"No records found for '{keyword}' after applying Date, TKT, and Status filters.")
                 return
 
-            col_a_name = section_df.columns[0] # Date
-            col_h_name = section_df.columns[7] # Local Service ID
+            col_a_name = section_df.columns[0]
+            col_h_name = section_df.columns[7]
             
             agg_df = section_df.groupby(col_h_name).agg(
                 Total_Repeated=(col_h_name, 'count'),
                 Distinct_Dates=(col_a_name, 'nunique')
             ).reset_index()
             
-            # Keep only IDs that appeared on DIFFERENT DATES
             dup_summary = agg_df[agg_df['Distinct_Dates'] > 1].copy()
             
             if dup_summary.empty:
                 st.success(f"✅ No duplicate Service IDs found with different dates for '{keyword}'.")
                 return
             
-            # Sort by highest repeat count
             dup_summary = dup_summary.sort_values(by="Total_Repeated", ascending=False)
-            
-            # Drop 'Distinct_Dates' column before displaying the pivot table
             display_pivot = dup_summary.drop(columns=['Distinct_Dates'])
             
-            # 👉 1. DISPLAY SUMMARY PIVOT TABLE
             with st.expander(f"📊 {keyword} - Summary Pivot Table", expanded=True):
                 st.dataframe(display_pivot, use_container_width=True, hide_index=True)
             
             st.markdown(f"#### 📋 {keyword} - Detailed Matching Data")
             
-            # Get the list of duplicate IDs in the sorted order
             dup_ids_sorted = dup_summary[col_h_name].tolist()
             combined_matched_list = []
             
-            # 👉 2. DISPLAY DETAILED RESULTS (Grouped by ID)
             for term in dup_ids_sorted:
                 term_results = section_df[section_df[col_h_name] == term].copy()
                 count = len(term_results)
                 
-                # Render ID header like Page 1
                 st.markdown(f"##### 🔹 `{term}` (Repeated {count} times)")
-                
-                # Apply column selection
                 term_display_df = term_results.iloc[:, valid_indices]
                 st.dataframe(term_display_df, use_container_width=True, hide_index=True)
-                st.markdown("<br>", unsafe_allow_html=True) # Adding a small space between tables
+                st.markdown("<br>", unsafe_allow_html=True)
                 
                 combined_matched_list.append(term_display_df)
             
-            # 👉 3. COMBINED DOWNLOAD BUTTON
             combined_matched_df = pd.concat(combined_matched_list, ignore_index=True)
             csv_data = combined_matched_df.to_csv(index=False).encode('utf-8')
             st.download_button(
@@ -356,7 +381,6 @@ def page_two(df):
                 key=f"dl_{keyword}"
             )
 
-        # --- 5. RENDER BOTH SECTIONS ---
         render_section("FR-SLA", "FR-SLA")
         render_section("Biz", "Biz")
 
@@ -371,7 +395,6 @@ def page_three(df):
     st.caption("Filtering by Date, Naypyitaw (Column AS), and POI (Column C) on the 4th Tab.")
 
     try:
-        # --- 1. GET 4TH TAB DATA ONLY ---
         unique_tabs = df["Source_Tab"].unique()
         if len(unique_tabs) < 4:
             st.error("⚠️ The Google Sheet does not have 4 tabs. Please ensure there are at least 4 tabs.")
@@ -380,11 +403,10 @@ def page_three(df):
         tab4_name = unique_tabs[3]
         working_df = df[df["Source_Tab"] == tab4_name].copy()
         
-        if len(working_df.columns) < 59: # Ensure enough columns for BG (Index 58)
+        if len(working_df.columns) < 59:
             st.error(f"⚠️ The 4th tab ('{tab4_name}') does not have enough columns. (Needs at least up to Column BG)")
             return
 
-        # --- 2. DATE SELECTOR ---
         col_A_dt = pd.to_datetime(working_df.iloc[:, 0], errors="coerce")
         unique_dates = col_A_dt.dt.date.dropna().unique()
         unique_dates_sorted = sorted(list(unique_dates), reverse=True)
@@ -395,7 +417,6 @@ def page_three(df):
 
         selected_date = st.date_input("Select Date for Report:", value=unique_dates_sorted[0], min_value=min(unique_dates_sorted), max_value=max(unique_dates_sorted))
 
-        # --- 3. APPLY FILTERS (Date, Naypyitaw in AS, POI in C) ---
         date_mask = col_A_dt.dt.date == selected_date
         as_mask = working_df.iloc[:, 44].astype(str).str.contains("Naypyitaw", case=False, na=False)
         c_mask = working_df.iloc[:, 2].astype(str).str.contains("POI", case=False, na=False)
@@ -406,7 +427,6 @@ def page_three(df):
             st.warning(f"No records found for Date: {selected_date.strftime('%d-%b-%Y')}, Region: Naypyitaw, and containing 'POI' in Column C.")
             return
 
-        # --- 4. TASK STATUS COUNT SUMMARY (Column BD - index 55) ---
         st.markdown("### 📈 Task Status Summary")
         
         col_c_name = filtered_df.columns[2]
@@ -416,47 +436,37 @@ def page_three(df):
         status_counts.columns = ['Task Status', 'Count']
         status_counts = status_counts.sort_values(by='Count', ascending=False)
         
-        # Add Grand Total Row for Overall Task Status Table
         total_overall = status_counts['Count'].sum()
         grand_total_overall_row = pd.DataFrame([{'Task Status': 'Grand Total', 'Count': total_overall}])
         status_counts = pd.concat([status_counts, grand_total_overall_row], ignore_index=True)
 
-        # -----------------------------------------------------
-        # LAYOUT: Two columns for Main Summary vs Tech/Non-Tech
-        # -----------------------------------------------------
         col_sum1, col_sum2 = st.columns([1, 2])
         
         with col_sum1:
             st.markdown("#### Overall Task Status")
-            # ညာဘက်အကွက်က Radio Button နဲ့ ညီသွားအောင် အပေါ်ကနေ နေရာလွတ်(Spacer) လေး တွန်းချပေးထားပါတယ်
             st.markdown("<div style='height: 68px;'></div>", unsafe_allow_html=True) 
+            render_copy_button(status_counts, "overall_status")
             st.dataframe(status_counts, use_container_width=True, hide_index=True)
 
         with col_sum2:
             st.markdown("#### Engr Visited Pending Breakdown")
             
-            # List of specific Technical Cancel values (de-duplicated)
             tech_cancel_list = [
                 "OTB Need to Box Maintenance", "Port Full", "No Link/High Loss", 
                 "No Fiber", "Cannot Install OTB", "OLT Issue", "Cable Stock Issue", 
                 "Cabling Route Issue", "OTB Need to Port Check", "Need Pole", 
                 "No MN Area", "Coverage Issue", "AP Issue", "Pole Remove", "Site Down"
             ]
-            
-            # Create lowercase list for robust matching
             tech_cancel_lower = [v.lower().strip() for v in tech_cancel_list]
             
-            # Filter Radio Button
             cancel_type = st.radio("Select Cancel Type:", ["Technical Cancel", "Non Technical Cancel"], horizontal=True)
             
-            # Filter dataframe for Engr Visited Pending only
             evp_mask = filtered_df.iloc[:, 55].astype(str).str.strip().str.lower().isin(["engr visited pending", "engr visited - pending"])
             evp_df = filtered_df[evp_mask].copy()
             
             if not evp_df.empty:
                 col_bb_name = evp_df.columns[53]
                 
-                # Mask to check if Column BB value is inside the technical cancel list
                 is_tech_mask = evp_df.iloc[:, 53].astype(str).str.strip().str.lower().isin(tech_cancel_lower)
                 
                 if cancel_type == "Technical Cancel":
@@ -465,27 +475,24 @@ def page_three(df):
                     breakdown_df = evp_df[~is_tech_mask].copy()
                     
                 if not breakdown_df.empty:
-                    # Group by Col BB and Count with Col C
                     breakdown_counts = breakdown_df.groupby(col_bb_name)[col_c_name].count().reset_index()
                     breakdown_counts.columns = ['Reason (Col BB)', 'Count']
                     breakdown_counts = breakdown_counts.sort_values(by='Count', ascending=False)
                     
-                    # Add Grand Total Row
                     total_count = breakdown_counts['Count'].sum()
                     grand_total_row = pd.DataFrame([{'Reason (Col BB)': 'Grand Total', 'Count': total_count}])
                     breakdown_counts = pd.concat([breakdown_counts, grand_total_row], ignore_index=True)
                     
+                    render_copy_button(breakdown_counts, "breakdown_status")
                     st.dataframe(breakdown_counts, use_container_width=True, hide_index=True)
                 else:
                     st.info(f"No {cancel_type} records found.")
             else:
                 st.info("No 'Engr Visited Pending' records found for the selected date.")
 
-        # --- 5. DETAIL DATA FOR SPECIFIC STATUSES ---
         st.markdown("---")
         st.markdown("### 📋 Detail Data for Pending/Not Visited/Handover Statuses")
 
-        # Filter for "Not Visited", "Engr Visited Pending", or "Handover to FTTx" in Column BD
         detail_status_mask = filtered_df.iloc[:, 55].astype(str).str.strip().str.lower().isin([
             "not visited", "engr visited pending", "engr visited - pending", "handover to fttx"
         ])
@@ -499,13 +506,11 @@ def page_three(df):
              if selected_detail_status:
                  final_detail_df = detail_df_base[detail_df_base.iloc[:, 55].astype(str).isin(selected_detail_status)].copy()
                  
-                 # Columns to display: C (2), AK (36), BE (56), AV (47), AZ (51), BA (52), BB (53), BC (54), BG (58)
                  cols_to_show_indices = [2, 36, 56, 47, 51, 52, 53, 54, 58]
-                 
                  valid_detail_indices = [i for i in cols_to_show_indices if i < len(final_detail_df.columns)]
-                 
                  display_detail_df = final_detail_df.iloc[:, valid_detail_indices]
                  
+                 render_copy_button(display_detail_df, "detail_data")
                  st.dataframe(display_detail_df, use_container_width=True, hide_index=True)
                  
                  csv_detail = display_detail_df.to_csv(index=False).encode('utf-8')
@@ -533,7 +538,6 @@ st.sidebar.markdown("---")
 st.sidebar.header("Data Controls")
 st.sidebar.button("🔄 Refresh Data from Google Sheet", on_click=clear_cache_callback)
 
-# Load data globally so it persists across pages
 with st.spinner("Loading data from Google Sheets..."):
     try:
         df = load_all_tabs()
@@ -545,7 +549,6 @@ with st.spinner("Loading data from Google Sheets..."):
 all_columns = df.columns.tolist()
 saved_prefs = load_saved_settings()
 
-# Route to the selected page
 if page == "1. Repeated Search Portal":
     page_one(df, all_columns, saved_prefs)
 elif page == "2. Weekly Filtered Report":
