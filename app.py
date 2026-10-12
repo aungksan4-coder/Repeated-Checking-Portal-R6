@@ -392,7 +392,7 @@ def page_two(df):
 # PAGE 3: KO PPO REPORT
 # ==========================================
 def page_three(df):
-    st.title("📊 NPW POI Report (Ko PPO Daily Report)")
+    st.title("📊 Ko PPO Report")
     st.caption("Filtering by Date, Naypyitaw (Column AS), and POI (Column C) on the 4th Tab.")
 
     try:
@@ -428,7 +428,7 @@ def page_three(df):
             st.warning(f"No records found for Date: {selected_date.strftime('%d-%b-%Y')}, Region: Naypyitaw, and containing 'POI' in Column C.")
             return
 
-        st.markdown("### 📈 POI Status")
+        st.markdown("### 📈 Task Status Summary")
         
         col_c_name = filtered_df.columns[2]
         col_bd_name = filtered_df.columns[55]
@@ -447,10 +447,10 @@ def page_three(df):
             st.markdown("#### Overall Task Status")
             st.markdown("<div style='height: 68px;'></div>", unsafe_allow_html=True) 
             render_copy_button(status_counts, "overall_status")
-            st.dataframe(status_counts.style.set_properties(**{'font-size': '16px'}), use_container_width=True, hide_index=True)
+            st.table(status_counts.set_index('Task Status'))
 
         with col_sum2:
-            st.markdown("#### Engr Visited Pending Reason")
+            st.markdown("#### Engr Visited Pending Breakdown")
             
             tech_cancel_list = [
                 "OTB Need to Box Maintenance", "Port Full", "No Link/High Loss", 
@@ -485,14 +485,14 @@ def page_three(df):
                     breakdown_counts = pd.concat([breakdown_counts, grand_total_row], ignore_index=True)
                     
                     render_copy_button(breakdown_counts, "breakdown_status")
-                    st.dataframe(breakdown_counts.style.set_properties(**{'font-size': '16px'}), use_container_width=True, hide_index=True)
+                    st.table(breakdown_counts.set_index('Reason (Col BB)'))
                 else:
                     st.info(f"No {cancel_type} records found.")
             else:
                 st.info("No 'Engr Visited Pending' records found for the selected date.")
 
         st.markdown("---")
-        st.markdown("### 📋 Detail Data for Engr Pending/Not Visited/Handover Statuses")
+        st.markdown("### 📋 Detail Data for Pending/Not Visited/Handover Statuses")
 
         detail_status_mask = filtered_df.iloc[:, 55].astype(str).str.strip().str.lower().isin([
             "not visited", "engr visited pending", "engr visited - pending", "handover to fttx"
@@ -512,7 +512,7 @@ def page_three(df):
                  display_detail_df = final_detail_df.iloc[:, valid_detail_indices]
                  
                  render_copy_button(display_detail_df, "detail_data")
-                 st.dataframe(display_detail_df.style.set_properties(**{'font-size': '15px'}), use_container_width=True, hide_index=True)
+                 st.table(display_detail_df.set_index(display_detail_df.columns[0]))
                  
                  csv_detail = display_detail_df.to_csv(index=False).encode('utf-8')
                  st.download_button(
