@@ -392,7 +392,7 @@ def page_two(df):
 # PAGE 3: KO PPO REPORT
 # ==========================================
 def page_three(df):
-    st.title("📊 Ko PPO Report")
+    st.title("📊 NPW POI Report (Ko PPO Daily Report")
     st.caption("Filtering by Date, Naypyitaw (Column AS), and POI (Column C) on the 4th Tab.")
 
     try:
@@ -452,13 +452,13 @@ def page_three(df):
         col_sum1, col_sum2 = st.columns([1, 2])
         
         with col_sum1:
-            st.markdown("#### Overall Task Status")
+            st.markdown("#### POI Status")
             st.markdown("<div style='height: 68px;'></div>", unsafe_allow_html=True) 
             render_copy_button(status_counts, "overall_status")
             st.table(status_counts.set_index('Task Status'))
 
         with col_sum2:
-            st.markdown("#### Engr Visited Pending Breakdown")
+            st.markdown("#### Engr Visited Pending Reason")
             
             tech_cancel_list = [
                 "OTB Need to Box Maintenance", "Port Full", "No Link/High Loss", 
@@ -501,7 +501,7 @@ def page_three(df):
 
         # --- NEW SECTION: Engineer vs Status Pivot Table ---
         st.markdown("---")
-        st.markdown("### 📊 Engineer vs Task Status Breakdown")
+        st.markdown("### 📊 Engineer Daily Plan POI Status")
         
         if not filtered_df.empty:
             col_ak_name = filtered_df.columns[36] # LAN Engineer Name
@@ -568,7 +568,7 @@ table.table tr:hover {{ background-color: #f5f5f5; }}
         # (အောက်က Detail Data အပိုင်း ဆက်သွားပါမယ်...)
 
         st.markdown("---")
-        st.markdown("### 📋 Detail Data for Pending/Not Visited/Handover Statuses")
+        st.markdown("### 📋 Detail Data for Engr Visited Pending/Not Visited/Handover to FTTX")
 
         detail_status_mask = filtered_df.iloc[:, 55].astype(str).str.strip().str.lower().isin([
             "not visited", "engr visited pending", "engr visited - pending", "handover to fttx"
