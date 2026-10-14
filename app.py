@@ -515,7 +515,8 @@ def page_three(df):
              if selected_detail_status:
                  final_detail_df = detail_df_base[detail_df_base.iloc[:, 55].astype(str).isin(selected_detail_status)].copy()
                  
-                 cols_to_show_indices = [2, 36, 56, 47, 51, 52, 53, 54, 58]
+                 # Columns to display: C (2), AK (36), BE (56), AV (47), AW (48), AX (49), AZ (51), BA (52), BB (53), BC (54), BG (58)
+                 cols_to_show_indices = [2, 36, 56, 47, 48, 49, 51, 52, 53, 54, 58]
                  valid_detail_indices = [i for i in cols_to_show_indices if i < len(final_detail_df.columns)]
                  display_detail_df = final_detail_df.iloc[:, valid_detail_indices]
                  
