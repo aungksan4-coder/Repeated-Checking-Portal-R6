@@ -553,8 +553,8 @@ def page_three(df):
                 eng_mask = filtered_df.iloc[:, 36].astype(str) == selected_engineer
                 eng_detail_df = filtered_df[eng_mask].copy()
 
-                # Display the same columns as the previous detail table
-                cols_to_show_indices = [2, 36, 56, 47, 51, 52, 53, 54, 58]
+                # Display the requested columns: C (2), BE (56), AV (47), AW (48), AX (49), AZ (51), BA (52), BB (53), BC (54), BD (55), BG (58)
+                cols_to_show_indices = [2, 56, 47, 48, 49, 51, 52, 53, 54, 55, 58]
                 valid_detail_indices = [i for i in cols_to_show_indices if i < len(eng_detail_df.columns)]
                 
                 display_eng_df = eng_detail_df.iloc[:, valid_detail_indices]
