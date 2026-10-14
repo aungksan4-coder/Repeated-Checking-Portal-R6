@@ -499,6 +499,41 @@ def page_three(df):
             else:
                 st.info("No 'Engr Visited Pending' records found for the selected date.")
 
+        # --- NEW SECTION: Engineer vs Status Pivot Table ---
+        st.markdown("---")
+        st.markdown("### 📊 Engineer vs Task Status Breakdown")
+        
+        # Check if we have data to pivot
+        if not filtered_df.empty:
+            col_ak_name = filtered_df.columns[36] # LAN Engineer Name
+            col_bd_name = filtered_df.columns[55] # Task Status
+            col_c_name = filtered_df.columns[2]   # Task No for counting
+            
+            # Create cross tabulation (Pivot table)
+            # rows = Col AK, columns = Col BD, values = count of Col C
+            pivot_df = pd.crosstab(
+                index=filtered_df[col_ak_name],
+                columns=filtered_df[col_bd_name],
+                values=filtered_df[col_c_name],
+                aggfunc='count',
+                margins=True,          # This adds the row and column totals
+                margins_name="Grand Total" # Name for the total row/col
+            ).fillna(0).astype(int)    # Replace NaN with 0 and convert to integer
+            
+            # Reset index so that Engineer Name becomes a regular column for displaying
+            pivot_display_df = pivot_df.reset_index()
+            
+            # Add a copy button for this new table
+            render_copy_button(pivot_display_df, "eng_status_pivot")
+            
+            # Display the table, setting the Engineer name column as index for better look
+            st.table(pivot_display_df.set_index(col_ak_name))
+        else:
+            st.info("No data available to generate the Engineer vs Status breakdown.")
+
+        # --- 5. DETAIL DATA FOR SPECIFIC STATUSES ---
+        # (အောက်က Detail Data အပိုင်း ဆက်သွားပါမယ်...)
+
         st.markdown("---")
         st.markdown("### 📋 Detail Data for Pending/Not Visited/Handover Statuses")
 
