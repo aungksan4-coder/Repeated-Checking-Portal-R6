@@ -517,6 +517,9 @@ def page_three(df):
                 margins_name="Grand Total" 
             ).fillna(0).astype(int)    
             
+            # ** ဇယားခေါင်းစဉ်က "Task Status" ကို ဖျက်ပါမယ် **
+            pivot_df.columns.name = None
+            
             # LAN Engineer Name (Index) ကို column အဖြစ် ပြောင်းပါမယ်
             pivot_display_df = pivot_df.reset_index()
             
@@ -532,14 +535,14 @@ def page_three(df):
             # Index column (LAN Engineer Name) ကို clickable link အဖြစ် အရင်ပြောင်းပါမယ်
             clickable_index = pivot_display_df[col_ak_name].apply(make_clickable)
             
-            # ** LAN Engineer Name column ကို ဇယားထဲကနေ ဖျက်ထုတ်ပါမယ် **
+            # LAN Engineer Name column ကို ဇယားထဲကနေ ဖျက်ထုတ်ပါမယ်
             pivot_display_df = pivot_display_df.drop(columns=[col_ak_name])
             
             # Clickable ဖြစ်နေတဲ့ နာမည်တွေကို Index အဖြစ် ပြန်ထားပါမယ်
             pivot_display_df.index = clickable_index
             
-            # Index ရဲ့ နာမည် (LAN Engineer Name) ကို ဇယားခေါင်းစဉ်အဖြစ် ပေါ်ဖို့ နာမည် ပြန်ပေးပါမယ်
-            pivot_display_df.index.name = col_ak_name
+            # ** Index ရဲ့ နာမည်ကို "LAN Engineer Name" လို့ ပေးပါမယ် (အပေါ်ဆုံး ဘယ်ဘက်ထောင့်မှာ ပေါ်အောင်လို့ပါ) **
+            pivot_display_df.index.name = "LAN Engineer Name"
 
             render_copy_button(pivot_display_df.reset_index(), "eng_status_pivot")
             
