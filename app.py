@@ -545,9 +545,10 @@ def page_three(df):
         engineer_names = sorted([name for name in engineer_names if name.strip()])
 
         if engineer_names:
-            selected_engineer = st.selectbox("Select LAN Engineer:", options=engineer_names)
-            
-            if selected_engineer:
+            # Loop through each engineer and display their own section
+            for selected_engineer in engineer_names:
+                st.markdown(f"#### 👷 {selected_engineer}")
+                
                 # Filter data where Col AK matches selected engineer
                 eng_mask = filtered_df.iloc[:, 36].astype(str) == selected_engineer
                 eng_detail_df = filtered_df[eng_mask].copy()
@@ -560,19 +561,25 @@ def page_three(df):
 
                 st.write(f"Showing **{len(display_eng_df)}** record(s) for **{selected_engineer}**:")
                 
-                render_copy_button(display_eng_df, "detail_data_eng")
+                # Create a unique ID for each copy button using a safe string
+                safe_eng_name = re.sub(r'[^a-zA-Z0-9]', '_', selected_engineer)
+                btn_id = f"detail_data_eng_{safe_eng_name}"
+                
+                render_copy_button(display_eng_df, btn_id)
                 st.table(display_eng_df.set_index(display_eng_df.columns[0]))
 
                 csv_eng_detail = display_eng_df.to_csv(index=False).encode('utf-8')
                 st.download_button(
                    label=f"📥 Download Data for {selected_engineer}",
                    data=csv_eng_detail,
-                   file_name=f"Ko_PPO_{selected_engineer}_{selected_date}.csv",
-                   mime="text/csv"
+                   file_name=f"Ko_PPO_{safe_eng_name}_{selected_date}.csv",
+                   mime="text/csv",
+                   key=f"dl_{safe_eng_name}" # Unique key for Streamlit download button
                 )
+                
+                st.markdown("<br><br>", unsafe_allow_html=True) # Add space between tables
         else:
             st.info("No Engineer names found in Column AK for the selected filters.")
-
 
     except Exception as e:
         st.error(f"An error occurred in Ko PPO Report: {e}")
