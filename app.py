@@ -392,7 +392,7 @@ def page_two(df):
 # PAGE 3: KO PPO REPORT
 # ==========================================
 def page_three(df):
-    st.title("📊 NPW Daily POI Report")
+    st.title("📊 Ko PPO Report")
     st.caption("Filtering by Date, Naypyitaw (Column AS), and POI (Column C) on the 4th Tab.")
 
     try:
@@ -428,10 +428,16 @@ def page_three(df):
             st.warning(f"No records found for Date: {selected_date.strftime('%d-%b-%Y')}, Region: Naypyitaw, and containing 'POI' in Column C.")
             return
 
-        st.markdown("### 📈 POI Status")
+        st.markdown("### 📈 Task Status Summary")
         
         col_c_name = filtered_df.columns[2]
         col_bd_name = filtered_df.columns[55]
+        col_ak_name = filtered_df.columns[36] # Column AK for Team
+
+        # --- 1. Calculate Total Team Count ---
+        # Get unique count of values in Column AK
+        total_team_count = filtered_df[col_ak_name].nunique(dropna=True)
+        total_team_row = pd.DataFrame([{'Task Status': 'Total Team', 'Count': total_team_count}])
 
         status_counts = filtered_df.groupby(col_bd_name)[col_c_name].count().reset_index()
         status_counts.columns = ['Task Status', 'Count']
@@ -439,7 +445,9 @@ def page_three(df):
         
         total_overall = status_counts['Count'].sum()
         grand_total_overall_row = pd.DataFrame([{'Task Status': 'Grand Total', 'Count': total_overall}])
-        status_counts = pd.concat([status_counts, grand_total_overall_row], ignore_index=True)
+        
+        # Combine Total Team, Status Counts, and Grand Total
+        status_counts = pd.concat([total_team_row, status_counts, grand_total_overall_row], ignore_index=True)
 
         col_sum1, col_sum2 = st.columns([1, 2])
         
@@ -447,10 +455,10 @@ def page_three(df):
             st.markdown("#### Overall Task Status")
             st.markdown("<div style='height: 68px;'></div>", unsafe_allow_html=True) 
             render_copy_button(status_counts, "overall_status")
-            st.dataframe(status_counts, use_container_width=True, hide_index=True)
+            st.table(status_counts.set_index('Task Status'))
 
         with col_sum2:
-            st.markdown("#### Engr Visited Pending Reason")
+            st.markdown("#### Engr Visited Pending Breakdown")
             
             tech_cancel_list = [
                 "OTB Need to Box Maintenance", "Port Full", "No Link/High Loss", 
@@ -485,14 +493,14 @@ def page_three(df):
                     breakdown_counts = pd.concat([breakdown_counts, grand_total_row], ignore_index=True)
                     
                     render_copy_button(breakdown_counts, "breakdown_status")
-                    st.dataframe(breakdown_counts, use_container_width=True, hide_index=True)
+                    st.table(breakdown_counts.set_index('Reason (Col BB)'))
                 else:
                     st.info(f"No {cancel_type} records found.")
             else:
                 st.info("No 'Engr Visited Pending' records found for the selected date.")
 
         st.markdown("---")
-        st.markdown("### 📋 Detail Data for Engr Visited Pending/Not Visited/Handover Statuses")
+        st.markdown("### 📋 Detail Data for Pending/Not Visited/Handover Statuses")
 
         detail_status_mask = filtered_df.iloc[:, 55].astype(str).str.strip().str.lower().isin([
             "not visited", "engr visited pending", "engr visited - pending", "handover to fttx"
@@ -511,14 +519,14 @@ def page_three(df):
                  valid_detail_indices = [i for i in cols_to_show_indices if i < len(final_detail_df.columns)]
                  display_detail_df = final_detail_df.iloc[:, valid_detail_indices]
                  
-                 render_copy_button(display_detail_df, "detail_data")
-                 st.dataframe(display_detail_df, use_container_width=True, hide_index=True)
+                 render_copy_button(display_detail_df, "detail_data_status")
+                 st.table(display_detail_df.set_index(display_detail_df.columns[0]))
                  
                  csv_detail = display_detail_df.to_csv(index=False).encode('utf-8')
                  st.download_button(
                     label="📥 Download Detail Data CSV",
                     data=csv_detail,
-                    file_name=f"Ko_PPO_Detail_Report_{selected_date}.csv",
+                    file_name=f"Ko_PPO_Detail_Report_Status_{selected_date}.csv",
                     mime="text/csv"
                  )
              else:
@@ -526,9 +534,48 @@ def page_three(df):
         else:
              st.info("No records found with status 'Not Visited', 'Engr Visited Pending', or 'Handover to FTTx' for the selected filters.")
 
+        # --- 2. Detail Data by LAN Engineer (Team) ---
+        st.markdown("---")
+        st.markdown("### 📋 Detail Data by LAN Engineer (Team)")
+        st.caption("Showing detail records grouped by individual Engineer from Column AK.")
+
+        # Extract unique, non-null engineer names from Column AK
+        engineer_names = filtered_df.iloc[:, 36].dropna().astype(str).unique().tolist()
+        # Sort names alphabetically
+        engineer_names = sorted([name for name in engineer_names if name.strip()])
+
+        if engineer_names:
+            selected_engineer = st.selectbox("Select LAN Engineer:", options=engineer_names)
+            
+            if selected_engineer:
+                # Filter data where Col AK matches selected engineer
+                eng_mask = filtered_df.iloc[:, 36].astype(str) == selected_engineer
+                eng_detail_df = filtered_df[eng_mask].copy()
+
+                # Display the same columns as the previous detail table
+                cols_to_show_indices = [2, 36, 56, 47, 51, 52, 53, 54, 58]
+                valid_detail_indices = [i for i in cols_to_show_indices if i < len(eng_detail_df.columns)]
+                
+                display_eng_df = eng_detail_df.iloc[:, valid_detail_indices]
+
+                st.write(f"Showing **{len(display_eng_df)}** record(s) for **{selected_engineer}**:")
+                
+                render_copy_button(display_eng_df, "detail_data_eng")
+                st.table(display_eng_df.set_index(display_eng_df.columns[0]))
+
+                csv_eng_detail = display_eng_df.to_csv(index=False).encode('utf-8')
+                st.download_button(
+                   label=f"📥 Download Data for {selected_engineer}",
+                   data=csv_eng_detail,
+                   file_name=f"Ko_PPO_{selected_engineer}_{selected_date}.csv",
+                   mime="text/csv"
+                )
+        else:
+            st.info("No Engineer names found in Column AK for the selected filters.")
+
+
     except Exception as e:
         st.error(f"An error occurred in Ko PPO Report: {e}")
-
 # ==========================================
 # MAIN APP FLOW & SIDEBAR NAVIGATION
 # ==========================================
