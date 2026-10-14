@@ -534,23 +534,20 @@ def page_three(df):
             render_copy_button(pivot_display_df, "eng_status_pivot")
             
             # 2. Render as HTML to support clickable links
-            # (st.table doesn't render HTML links inside cells correctly in newer versions)
             html_table = pivot_display_df.to_html(escape=False, index=False, classes='table table-striped', justify='left')
             
-            # Add some basic CSS to match Streamlit's look
+            # Add some basic CSS to match Streamlit's look (No leading spaces to avoid markdown code block rendering)
             st.markdown(
-                f"""
-                <style>
-                    .dataframe-container {{ width: 100%; overflow-x: auto; margin-bottom: 1rem; }}
-                    table.table {{ width: 100%; border-collapse: collapse; font-size: 15px; font-family: sans-serif; }}
-                    table.table th, table.table td {{ border: 1px solid #e0e0e0; padding: 8px; text-align: left; }}
-                    table.table th {{ background-color: #f8f9fa; color: #31333F; font-weight: 600; }}
-                    table.table tr:hover {{ background-color: #f5f5f5; }}
-                </style>
-                <div class="dataframe-container">
-                    {html_table}
-                </div>
-                """,
+f"""<style>
+.dataframe-container {{ width: 100%; overflow-x: auto; margin-bottom: 1rem; }}
+table.table {{ width: 100%; border-collapse: collapse; font-size: 15px; font-family: sans-serif; }}
+table.table th, table.table td {{ border: 1px solid #e0e0e0; padding: 8px; text-align: left; }}
+table.table th {{ background-color: #f8f9fa; color: #31333F; font-weight: 600; }}
+table.table tr:hover {{ background-color: #f5f5f5; }}
+</style>
+<div class="dataframe-container">
+{html_table}
+</div>""",
                 unsafe_allow_html=True
             )
 
