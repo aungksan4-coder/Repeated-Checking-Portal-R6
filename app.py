@@ -517,6 +517,7 @@ def page_three(df):
                 margins_name="Grand Total" 
             ).fillna(0).astype(int)    
             
+            # LAN Engineer Name (Index) ကို column အဖြစ် ပြောင်းပါမယ်
             pivot_display_df = pivot_df.reset_index()
             
             # 1. Convert Engineer Names to Clickable HTML Links
@@ -528,15 +529,23 @@ def page_three(df):
                 # Create the HTML link pointing to the anchor
                 return f'<a href="#eng_{safe_id}" target="_self" style="text-decoration: none; color: #1f77b4; font-weight: bold;">{val}</a>'
             
-            # Apply the function to the first column (LAN Engineer Name)
-            pivot_display_df[col_ak_name] = pivot_display_df[col_ak_name].apply(make_clickable)
+            # Index column (LAN Engineer Name) ကို clickable link အဖြစ် အရင်ပြောင်းပါမယ်
+            clickable_index = pivot_display_df[col_ak_name].apply(make_clickable)
+            
+            # ** LAN Engineer Name column ကို ဇယားထဲကနေ ဖျက်ထုတ်ပါမယ် **
+            pivot_display_df = pivot_display_df.drop(columns=[col_ak_name])
+            
+            # Clickable ဖြစ်နေတဲ့ နာမည်တွေကို Index အဖြစ် ပြန်ထားပါမယ်
+            pivot_display_df.index = clickable_index
+            
+            # Index ရဲ့ နာမည် (LAN Engineer Name) ကို ဇယားခေါင်းစဉ်အဖြစ် ပေါ်ဖို့ နာမည် ပြန်ပေးပါမယ်
+            pivot_display_df.index.name = col_ak_name
 
-            render_copy_button(pivot_display_df, "eng_status_pivot")
+            render_copy_button(pivot_display_df.reset_index(), "eng_status_pivot")
             
             # 2. Render as HTML to support clickable links
-            html_table = pivot_display_df.to_html(escape=False, index=False, classes='table table-striped', justify='left')
+            html_table = pivot_display_df.to_html(escape=False, classes='table table-striped', justify='left')
             
-            # Add some basic CSS to match Streamlit's look (No leading spaces to avoid markdown code block rendering)
             st.markdown(
 f"""<style>
 .dataframe-container {{ width: 100%; overflow-x: auto; margin-bottom: 1rem; }}
@@ -606,8 +615,8 @@ table.table tr:hover {{ background-color: #f5f5f5; }}
                 
                 safe_eng_name = re.sub(r'[^a-zA-Z0-9]', '_', selected_engineer)
                 
-                # 3. Add invisible Anchor Target div right above the Engineer's heading
-                st.markdown(f'<div id="eng_{safe_eng_name}"></div>', unsafe_allow_html=True)
+                # 3. Add Anchor Target div with top padding/margin so the title isn't hidden behind the top bar
+                st.markdown(f'<div id="eng_{safe_eng_name}" style="padding-top: 60px; margin-top: -60px;"></div>', unsafe_allow_html=True)
                 st.markdown(f"#### 👷 {selected_engineer}")
                 
                 eng_mask = filtered_df.iloc[:, 36].astype(str) == selected_engineer
