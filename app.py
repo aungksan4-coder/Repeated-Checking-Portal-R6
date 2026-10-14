@@ -503,31 +503,57 @@ def page_three(df):
         st.markdown("---")
         st.markdown("### 📊 Engineer vs Task Status Breakdown")
         
-        # Check if we have data to pivot
         if not filtered_df.empty:
             col_ak_name = filtered_df.columns[36] # LAN Engineer Name
             col_bd_name = filtered_df.columns[55] # Task Status
             col_c_name = filtered_df.columns[2]   # Task No for counting
             
-            # Create cross tabulation (Pivot table)
-            # rows = Col AK, columns = Col BD, values = count of Col C
             pivot_df = pd.crosstab(
                 index=filtered_df[col_ak_name],
                 columns=filtered_df[col_bd_name],
                 values=filtered_df[col_c_name],
                 aggfunc='count',
-                margins=True,          # This adds the row and column totals
-                margins_name="Grand Total" # Name for the total row/col
-            ).fillna(0).astype(int)    # Replace NaN with 0 and convert to integer
+                margins=True,          
+                margins_name="Grand Total" 
+            ).fillna(0).astype(int)    
             
-            # Reset index so that Engineer Name becomes a regular column for displaying
             pivot_display_df = pivot_df.reset_index()
             
-            # Add a copy button for this new table
+            # 1. Convert Engineer Names to Clickable HTML Links
+            def make_clickable(val):
+                if val == "Grand Total":
+                    return val
+                # Create a safe ID string for the anchor link
+                safe_id = re.sub(r'[^a-zA-Z0-9]', '_', str(val))
+                # Create the HTML link pointing to the anchor
+                return f'<a href="#eng_{safe_id}" target="_self" style="text-decoration: none; color: #1f77b4; font-weight: bold;">{val}</a>'
+            
+            # Apply the function to the first column (LAN Engineer Name)
+            pivot_display_df[col_ak_name] = pivot_display_df[col_ak_name].apply(make_clickable)
+
             render_copy_button(pivot_display_df, "eng_status_pivot")
             
-            # Display the table, setting the Engineer name column as index for better look
-            st.table(pivot_display_df.set_index(col_ak_name))
+            # 2. Render as HTML to support clickable links
+            # (st.table doesn't render HTML links inside cells correctly in newer versions)
+            html_table = pivot_display_df.to_html(escape=False, index=False, classes='table table-striped', justify='left')
+            
+            # Add some basic CSS to match Streamlit's look
+            st.markdown(
+                f"""
+                <style>
+                    .dataframe-container {{ width: 100%; overflow-x: auto; margin-bottom: 1rem; }}
+                    table.table {{ width: 100%; border-collapse: collapse; font-size: 15px; font-family: sans-serif; }}
+                    table.table th, table.table td {{ border: 1px solid #e0e0e0; padding: 8px; text-align: left; }}
+                    table.table th {{ background-color: #f8f9fa; color: #31333F; font-weight: 600; }}
+                    table.table tr:hover {{ background-color: #f5f5f5; }}
+                </style>
+                <div class="dataframe-container">
+                    {html_table}
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
         else:
             st.info("No data available to generate the Engineer vs Status breakdown.")
 
@@ -575,21 +601,21 @@ def page_three(df):
         st.markdown("### 📋 Detail Data by LAN Engineer (Team)")
         st.caption("Showing detail records grouped by individual Engineer from Column AK.")
 
-        # Extract unique, non-null engineer names from Column AK
         engineer_names = filtered_df.iloc[:, 36].dropna().astype(str).unique().tolist()
-        # Sort names alphabetically
         engineer_names = sorted([name for name in engineer_names if name.strip()])
 
         if engineer_names:
-            # Loop through each engineer and display their own section
             for selected_engineer in engineer_names:
+                
+                safe_eng_name = re.sub(r'[^a-zA-Z0-9]', '_', selected_engineer)
+                
+                # 3. Add invisible Anchor Target div right above the Engineer's heading
+                st.markdown(f'<div id="eng_{safe_eng_name}"></div>', unsafe_allow_html=True)
                 st.markdown(f"#### 👷 {selected_engineer}")
                 
-                # Filter data where Col AK matches selected engineer
                 eng_mask = filtered_df.iloc[:, 36].astype(str) == selected_engineer
                 eng_detail_df = filtered_df[eng_mask].copy()
 
-                # Display the requested columns: C (2), BE (56), AV (47), AW (48), AX (49), AZ (51), BA (52), BB (53), BC (54), BD (55), BG (58)
                 cols_to_show_indices = [2, 56, 47, 48, 49, 51, 52, 53, 54, 55, 58]
                 valid_detail_indices = [i for i in cols_to_show_indices if i < len(eng_detail_df.columns)]
                 
@@ -597,8 +623,6 @@ def page_three(df):
 
                 st.write(f"Showing **{len(display_eng_df)}** record(s) for **{selected_engineer}**:")
                 
-                # Create a unique ID for each copy button using a safe string
-                safe_eng_name = re.sub(r'[^a-zA-Z0-9]', '_', selected_engineer)
                 btn_id = f"detail_data_eng_{safe_eng_name}"
                 
                 render_copy_button(display_eng_df, btn_id)
@@ -610,10 +634,10 @@ def page_three(df):
                    data=csv_eng_detail,
                    file_name=f"Ko_PPO_{safe_eng_name}_{selected_date}.csv",
                    mime="text/csv",
-                   key=f"dl_{safe_eng_name}" # Unique key for Streamlit download button
+                   key=f"dl_{safe_eng_name}" 
                 )
                 
-                st.markdown("<br><br>", unsafe_allow_html=True) # Add space between tables
+                st.markdown("<br><br>", unsafe_allow_html=True) 
         else:
             st.info("No Engineer names found in Column AK for the selected filters.")
 
