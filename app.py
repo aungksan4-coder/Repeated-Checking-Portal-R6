@@ -517,37 +517,35 @@ def page_three(df):
                 margins_name="Grand Total" 
             ).fillna(0).astype(int)    
             
-            # ** ဇယားခေါင်းစဉ်က "Task Status" ကို ဖျက်ပါမယ် **
+            # ဇယားခေါင်းစဉ်က "Task Status" ကို ဖျက်ပါမယ်
             pivot_df.columns.name = None
             
             # LAN Engineer Name (Index) ကို column အဖြစ် ပြောင်းပါမယ်
             pivot_display_df = pivot_df.reset_index()
             
+            # ** ပထမဆုံး Column နာမည်ကို "LAN Engineer Name" လို့ တိုက်ရိုက် ပေးလိုက်ပါမယ် **
+            # (ဒါမှ အောက်မှာ Row အလွတ်ကြီး မထွက်တော့မှာပါ)
+            pivot_display_df = pivot_display_df.rename(columns={col_ak_name: "LAN Engineer Name"})
+            
             # 1. Convert Engineer Names to Clickable HTML Links
             def make_clickable(val):
                 if val == "Grand Total":
                     return val
-                # Create a safe ID string for the anchor link
                 safe_id = re.sub(r'[^a-zA-Z0-9]', '_', str(val))
-                # Create the HTML link pointing to the anchor
                 return f'<a href="#eng_{safe_id}" target="_self" style="text-decoration: none; color: #1f77b4; font-weight: bold;">{val}</a>'
             
-            # Index column (LAN Engineer Name) ကို clickable link အဖြစ် အရင်ပြောင်းပါမယ်
-            clickable_index = pivot_display_df[col_ak_name].apply(make_clickable)
-            
-            # LAN Engineer Name column ကို ဇယားထဲကနေ ဖျက်ထုတ်ပါမယ်
-            pivot_display_df = pivot_display_df.drop(columns=[col_ak_name])
-            
-            # Clickable ဖြစ်နေတဲ့ နာမည်တွေကို Index အဖြစ် ပြန်ထားပါမယ်
-            pivot_display_df.index = clickable_index
-            
-            # ** Index ရဲ့ နာမည်ကို "LAN Engineer Name" လို့ ပေးပါမယ် (အပေါ်ဆုံး ဘယ်ဘက်ထောင့်မှာ ပေါ်အောင်လို့ပါ) **
-            pivot_display_df.index.name = "LAN Engineer Name"
+            # ပထမဆုံး Column ကို Clickable Link အဖြစ် ပြောင်းပါမယ်
+            pivot_display_df["LAN Engineer Name"] = pivot_display_df["LAN Engineer Name"].apply(make_clickable)
 
-            render_copy_button(pivot_display_df.reset_index(), "eng_status_pivot")
+            # Copy Button အတွက် (HTML မပြောင်းခင် Data ကို ယူပါမယ်)
+            copy_df = pivot_display_df.copy()
+            # Copy ကူးရင် HTML tag တွေမပါအောင် နာမည်အမှန် ပြန်ထည့်ပါမယ်
+            copy_df["LAN Engineer Name"] = pivot_df.reset_index()[col_ak_name] 
+            render_copy_button(copy_df, "eng_status_pivot")
             
             # 2. Render as HTML to support clickable links
-            html_table = pivot_display_df.to_html(escape=False, classes='table table-striped', justify='left')
+            # (index=False လို့ သတ်မှတ်လိုက်တဲ့အတွက် အရှေ့ဆုံးမှာ နံပါတ်စဉ်တွေ မပေါ်တော့ဘဲ ဇယားက သပ်ရပ်သွားပါမယ်)
+            html_table = pivot_display_df.to_html(escape=False, index=False, classes='table table-striped', justify='left')
             
             st.markdown(
 f"""<style>
