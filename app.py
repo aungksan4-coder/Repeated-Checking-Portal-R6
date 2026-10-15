@@ -285,7 +285,7 @@ def page_one(df, all_columns, saved_prefs):
 # PAGE 2: WEEKLY FILTERED REPORT
 # ==========================================
 def page_two(df):
-    st.title("📅 Weekly FR-SLA Repeated Report (Ko TTM)")
+    st.title("📅 Weekly FR-SLA Repeated Report")
     st.caption("Checking duplicates across different dates for Last Week's Mon-Sun on the 4th Tab.")
 
     try:
@@ -654,7 +654,7 @@ table.table tr:hover {{ background-color: #f5f5f5; }}
 # MAIN APP FLOW & SIDEBAR NAVIGATION
 # ==========================================
 st.sidebar.title("🧭 Navigation")
-page = st.sidebar.radio("Go to:", ["1. Repeated Search Portal", "2. Weekly FR-SLA Repeated Report (Ko TTM)", "3. Ko PPO Report"])
+page = st.sidebar.radio("Go to:", ["1. Repeated Search Portal", "2. Weekly FR-SLA Repeated Report", "3. Ko PPO Report"])
 st.sidebar.markdown("---")
 
 st.sidebar.header("Data Controls")
@@ -674,7 +674,7 @@ saved_prefs = load_saved_settings()
 
 if page == "1. Repeated Search Portal":
     page_one(df, all_columns, saved_prefs)
-elif page == "2. Weekly Filtered Report":
+elif page == "2. Weekly FR-SLA Repeated Report":
     page_two(df)
 elif page == "3. Ko PPO Report":
     page_three(df)
