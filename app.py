@@ -392,7 +392,7 @@ def page_two(df):
 # PAGE 3: KO PPO REPORT
 # ==========================================
 def page_three(df):
-    st.title("📊 NPW POI Report (Ko PPO Daily Report)"
+    st.title("📊 NPW POI Report (Ko PPO Daily Report)")
     st.caption("Filtering by Date, Naypyitaw (Column AS), and POI (Column C) on the 4th Tab.")
 
     try:
